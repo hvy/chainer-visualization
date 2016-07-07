@@ -5,6 +5,7 @@ from chainer import serializers
 from chainer import Variable
 
 from VGG import VGG, input_dimensions
+import VGGVisualizer
 
 
 if __name__ == '__main__':
@@ -18,19 +19,17 @@ if __name__ == '__main__':
 
     vgg = VGG()
     serializers.load_hdf5('VGG.model', vgg)
+    vgg = VGGVisualizer.from_VGG(vgg)
 
-    pred = vgg(Variable(img), None)
+    reconstruction = vgg(Variable(img), None)
 
-    """
-    words = open('data/synset_words.txt').readlines()
-    words = [(w[0], ' '.join(w[1:])) for w in [w.split() for w in words]]
-    words = np.asarray(words)
+    n, c, h, w = reconstruction.data.shape
 
-    top5 = np.argsort(pred)[0][::-1][:5]
-    probs = np.sort(pred)[0][::-1][:5]
-    for w, p in zip(words[top5], probs):
-        print('{}\tprobability:{}'.format(w, p))
-    """
-    print('done!')
+    # Assume a single image in batch and get it
+    img = reconstruction.data[0]
+    img = np.rollaxis(img, 0, 3)
+    img += mean
 
+    cv.imwrite('cat_reconstructed.jpg', img)
 
+    print('Done')
