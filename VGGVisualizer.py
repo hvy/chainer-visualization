@@ -127,66 +127,61 @@ class VGGVisualizer(chainer.Chain):
         print (h.data[0, 0, :6, :6])
         """
         outsize1 = h.data.shape[2:]
-        print 'outsize1: ', outsize1
         h, indexes1 = F.max_pooling_2d(h, 2, stride=2)
 
         h = F.relu(self.conv2_1(h))
         h = F.relu(self.conv2_2(h))
         outsize2 = h.data.shape[2:]
-        print 'outsize2: ', outsize2
         h, indexes2 = F.max_pooling_2d(h, 2, stride=2)
+
 
         h = F.relu(self.conv3_1(h))
         h = F.relu(self.conv3_2(h))
         h = F.relu(self.conv3_3(h))
         outsize3 = h.data.shape[2:]
-        print 'outsize3: ', outsize3
         h, indexes3 = F.max_pooling_2d(h, 2, stride=2)
 
         h = F.relu(self.conv4_1(h))
         h = F.relu(self.conv4_2(h))
         h = F.relu(self.conv4_3(h))
         outsize4 = h.data.shape[2:]
-        print 'outsize4: ', outsize4
         h, indexes4 = F.max_pooling_2d(h, 2, stride=2)
 
         h = F.relu(self.conv5_1(h))
         h = F.relu(self.conv5_2(h))
         h = F.relu(self.conv5_3(h))
         outsize5 = h.data.shape[2:]
-        print 'outsize5: ', outsize5
         h, indexes5 = F.max_pooling_2d(h, 2, stride=2)
 
+        h_tmp = h.data.copy()
+        print 'h.shape'
+        print h_tmp.shape
+
+
         # Reconstruction
+        i = 10
+        import numpy as np
+        h = np.zeros(h_tmp.shape)
+        h[0][i] = h_tmp[0][i]
+        h = Variable(h)
+
         h = F.unpooling_2d(h, indexes5, 2, stride=2, outsize=outsize5)
         h = self.deconv5_3(F.relu(h))
         h = self.deconv5_2(F.relu(h))
         h = self.deconv5_1(F.relu(h))
-        """
-        h = F.relu(self.deconv5_3(h))
-        h = F.relu(self.deconv5_2(h))
-        h = F.relu(self.deconv5_1(h))
-        """
+        # return h
 
         h = F.unpooling_2d(h, indexes4, 2, stride=2, outsize=outsize4)
         h = self.deconv4_3(F.relu(h))
         h = self.deconv4_2(F.relu(h))
         h = self.deconv4_1(F.relu(h))
-        """
-        h = F.relu(self.deconv4_3(h))
-        h = F.relu(self.deconv4_2(h))
-        h = F.relu(self.deconv4_1(h))
-        """
+
 
         h = F.unpooling_2d(h, indexes3, 2, stride=2, outsize=outsize3)
         h = self.deconv3_3(F.relu(h))
         h = self.deconv3_2(F.relu(h))
         h = self.deconv3_1(F.relu(h))
-        """
-        h = F.relu(self.deconv3_3(h))
-        h = F.relu(self.deconv3_2(h))
-        h = F.relu(self.deconv3_1(h))
-        """
+
 
         h = F.unpooling_2d(h, indexes2, 2, stride=2, outsize=outsize2)
         h = self.deconv2_2(F.relu(h))
@@ -196,12 +191,15 @@ class VGGVisualizer(chainer.Chain):
         h = self.deconv1_2(F.relu(h))
         h = self.deconv1_1(F.relu(h))
 
+        print(h.data)
+        print(h.data.shape)
+
+
         # Return first layer visualizations
         return h
 
         print('--- After pooling (subset) ---')
         print h_prim.data[0, 0, :6, :6]
-
 
         """
         h = F.dropout(F.relu(self.fc6(h)), train=self.train, ratio=0.5)

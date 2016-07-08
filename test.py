@@ -19,6 +19,25 @@ if __name__ == '__main__':
 
     vgg = VGG()
     serializers.load_hdf5('VGG.model', vgg)
+
+
+    # Visualize fst filter
+    """
+    imgs = ()
+    for i in range(64):
+        fil = vgg.conv1_1.W.data[i]
+        fil = np.rollaxis(fil, 0, 3)
+        min_val = fil.min()
+        fil -= min_val
+        max_val = fil.max()
+        fil *= ( 255.0 / max_val)
+        imgs += (fil,)
+        imgs += (np.zeros((3, 3, 3)),)
+
+    vis = np.concatenate(imgs, axis=0)
+    cv.imwrite('filters_conv1_1_new.jpg', vis)
+    """
+
     vgg = VGGVisualizer.from_VGG(vgg)
 
     reconstruction = vgg(Variable(img), None)
@@ -27,9 +46,19 @@ if __name__ == '__main__':
 
     # Assume a single image in batch and get it
     img = reconstruction.data[0]
-    img = np.rollaxis(img, 0, 3)
-    img += mean
+    print('Max: {}'.format(img.max()))
+    print('Min: {}'.format(img.min()))
+    img -= img.min()
+    if img.max() > 0:
+        img *= 255.0 / img.max()
+    else:
+        img *= 255.0
 
-    cv.imwrite('cat_reconstructed.jpg', img)
+    print('img.shape: {}'.format(img.shape))
+    img = np.rollaxis(img, 0, 3)
+    # img += mean
+
+    # cv.imwrite('cat_reconstructed.jpg', img)
+    cv.imwrite('new_dog.jpg', img)
 
     print('Done')
