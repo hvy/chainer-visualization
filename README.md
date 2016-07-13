@@ -9,11 +9,6 @@ An implementation of the neural network visualization by Zeiler and Fergus using
 - Install Chainer
 - Download the Chainer VGG model
 
-## TODO
-
-- [ ] Speed up indexed unpooling
-- [ ] Support GPU
-- [ ] Support Python 3.5
 
 ## Run
 
@@ -23,3 +18,12 @@ python visualize.py
 
 Simply run the `visualize.py` script. The VGG model will be feeded with one of the sample images. Feature map activations for each of the five convolutional layers in the VGG model will be stored in the `activations/` sub-directorty.
 
+## Sample Output
+
+![](sample.jpg)
+
+## TODO
+
+- [ ] Speed up indexed unpooling
+- [ ] Support GPU
+- [ ] Support Python 3.5
