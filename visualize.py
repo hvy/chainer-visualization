@@ -4,7 +4,7 @@ import cv2 as cv
 from chainer import serializers
 from chainer import Variable
 from models.VGG import VGG
-import imgutil
+from utils import imgutil
 
 
 """
