@@ -27,9 +27,12 @@ class MaxPooling2D(pooling_2d.Pooling2D):
         return y, self.indexes
 
     def forward_gpu(self, x):
-        if cuda.cudnn_enabled and self.use_cudnn:
-            return super(MaxPooling2D, self).forward_gpu(x)
+        """
+        Commented away since we need the indexes for the unpooling process.
 
+        if cuda.cudnn_enabled and self.use_cudnn:
+            return super(MaxPooling2D, self).forward_gpu(x), self.indexes
+        """
         n, c, h, w = x[0].shape
         y_h = conv.get_conv_outsize(
             h, self.kh, self.sy, self.ph, self.cover_all)

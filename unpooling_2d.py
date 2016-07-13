@@ -55,6 +55,9 @@ class Unpooling2D(pooling_2d.Pooling2D):
         # NOTE(hvy): Take indexes(Switches) into account
         # TODO(hvy): Remove the loops and make it efficient
         y = xp.zeros_like(col)
+        if isinstance(x[0], cuda.ndarray):
+            indexes = cuda.cupy.asnumpy(indexes)
+
         for n_i in range(n):
             for c_i in range(c):
                 for r in range(h):
