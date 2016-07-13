@@ -2,16 +2,16 @@ import chainer
 import chainer.links as L
 import chainer.functions as F
 from chainer import Variable
-from max_pooling_2d import max_pooling_2d
-from unpooling_2d import unpooling_2d
+from lib.chainer.chainer.functions.pooling import max_pooling_2d
+from lib.chainer.chainer.functions.pooling import unpooling_2d
 
-F.max_pooling_2d = max_pooling_2d
-F.unpooling_2d = unpooling_2d
-
-input_dimensions = (244, 244)
+# Override original Chainer functions
+F.max_pooling_2d = max_pooling_2d.max_pooling_2d
+F.unpooling_2d = unpooling_2d.unpooling_2d
 
 
 class VGG(chainer.Chain):
+    """Input dimensions are (244, 244)."""
     def __init__(self):
         super(VGG, self).__init__(
             conv1_1=L.Convolution2D(3, 64, 3, stride=1, pad=1),

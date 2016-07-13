@@ -3,7 +3,7 @@ import numpy as np
 import cv2 as cv
 from chainer import serializers
 from chainer import Variable
-from VGGVisualizer import VGG
+from models.VGG import VGG
 import imgutil
 
 
