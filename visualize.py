@@ -31,15 +31,26 @@ def get_activations(model, x, layer):
     """
     a = model.activations(Variable(x), layer=layer+1)  # To 1-indexed
     a = a.data[0]  # Assume batch with a single image
-    return post_process_activations(a)
+    a = post_process_activations(a)
+    # a = [post_process_activations(_a) for _a in a]
+    return a
 
 
 def post_process_activations(a):
-    a -= a.min()
-    if a.max() > 0:
-        a *= 255.0 / a.max()
-    else:
-        a *= 255.0
+    # Center at 0 with std 0.1
+    a -= a.mean()
+    a /= (a.std() + 1e-5)
+    a *= 0.1
+
+    # Clip to [0, 1]
+    a += 0.5
+    a = np.clip(a, 0, 1)
+
+    # To RGB
+    a *= 255
+    # a = a.transpose((1, 2, 0))
+    a = np.clip(a, 0, 255).astype('uint8')
+
     return a
 
 

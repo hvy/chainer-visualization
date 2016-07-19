@@ -20,25 +20,25 @@ Simply run the `visualize.py` script. The VGG model will be feeded with one of t
 
 ## Sample Outputs
 
-### First layer convolutions
+### First layer of convolutions
 
-![](samples/conv1.jpg)
+![](samples/cat/conv1.jpg)
 
-### Second layer convolutions
+### Second layer of convolutions
 
-![](samples/conv2.jpg)
+![](samples/cat/conv2.jpg)
 
-### Third layer convolutions
+### Third layer of convolutions
 
-![](samples/conv3.jpg)
+![](samples/cat/conv3.jpg)
 
-### Forth layer convolutions
+### Forth layer of convolutions
 
-![](samples/conv4.jpg)
+![](samples/cat/conv4.jpg)
 
-### Fifth layer convolutions
+### Fifth layer of convolutions
 
-![](samples/conv5.jpg)
+![](samples/cat/conv5.jpg)
 
 ## TODO
 
