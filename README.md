@@ -2,7 +2,7 @@
 
 An implementation of the neural network visualization by Zeiler and Fergus using Chainer.
 
-[Visualizing and Understanding Convolutional Networks, 2012](https://arxiv.org/pdf/1311.2901v3.pdf)
+[Visualizing and Understanding Convolutional Networks, 2013](https://arxiv.org/abs/1311.2901)
 
 ## Prerequisites
 
