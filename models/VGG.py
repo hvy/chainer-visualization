@@ -1,138 +1,147 @@
+import cupy
 import chainer
 import chainer.links as L
 import chainer.functions as F
-from chainer import Variable
-from lib.chainer.chainer.functions.pooling import max_pooling_2d
-from lib.chainer.chainer.functions.pooling import unpooling_2d
-
-# Override original Chainer functions
-F.max_pooling_2d = max_pooling_2d.max_pooling_2d
-F.unpooling_2d = unpooling_2d.unpooling_2d
+from chainer import Variable, cuda
 
 
 class VGG(chainer.Chain):
-    """Input dimensions are (244, 244)."""
+
+    """Input dimensions are (224, 224)."""
+
     def __init__(self):
-        super(VGG, self).__init__(
+        super().__init__(
             conv1_1=L.Convolution2D(3, 64, 3, stride=1, pad=1),
             conv1_2=L.Convolution2D(64, 64, 3, stride=1, pad=1),
-
             conv2_1=L.Convolution2D(64, 128, 3, stride=1, pad=1),
             conv2_2=L.Convolution2D(128, 128, 3, stride=1, pad=1),
-
             conv3_1=L.Convolution2D(128, 256, 3, stride=1, pad=1),
             conv3_2=L.Convolution2D(256, 256, 3, stride=1, pad=1),
             conv3_3=L.Convolution2D(256, 256, 3, stride=1, pad=1),
-
             conv4_1=L.Convolution2D(256, 512, 3, stride=1, pad=1),
             conv4_2=L.Convolution2D(512, 512, 3, stride=1, pad=1),
             conv4_3=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-
             conv5_1=L.Convolution2D(512, 512, 3, stride=1, pad=1),
             conv5_2=L.Convolution2D(512, 512, 3, stride=1, pad=1),
             conv5_3=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-
             fc6=L.Linear(25088, 4096),
             fc7=L.Linear(4096, 4096),
             fc8=L.Linear(4096, 1000)
         )
-        self.convs = [
-            ['conv1_1', 'conv1_2'],
-            ['conv2_1', 'conv2_2'],
-            ['conv3_1', 'conv3_2', 'conv3_3'],
-            ['conv4_1', 'conv4_2', 'conv4_3'],
-            ['conv5_1', 'conv5_2', 'conv5_3']]
 
-        self.train = False
-        self.switches = []
-        self.unpooling_outsizes = []
-        self.added_deconv = False
+        self.conv_blocks = [
+            [self.conv1_1, self.conv1_2],
+            [self.conv2_1, self.conv2_2],
+            [self.conv3_1, self.conv3_2, self.conv3_3],
+            [self.conv4_1, self.conv4_2, self.conv4_3],
+            [self.conv5_1, self.conv5_2, self.conv5_3]
+        ]
+        self.deconv_blocks= []
 
-    def __call__(self, x, t=None, stop_layer=None):
-        self.switches = []
-        self.unpooling_outsizes = []
+        # Keep track of the pooling indices inside each function instance
+        self.mps = [F.MaxPooling2D(2, 2, use_cudnn=False) for _ in self.conv_blocks]
 
-        # Forward pass through convolutional layers with ReLU and pooling
-        h = x
-        for i, layer in enumerate(self.convs):
-            for conv in layer:
-                h = F.relu(getattr(self, conv)(h))
+    def __call__(self, x, train=False):
 
-            prepooling_size = h.data.shape[2:]
-            self.unpooling_outsizes.append(prepooling_size)
+        """Return a softmax probability distribution over predicted classes."""
 
-            h, switches = F.max_pooling_2d(h, 2, stride=2)
-            self.switches.append(switches)
+        # Convolutional layers
+        hs, _ = self.feature_map_activations(x)
+        h = hs[-1]
 
-            if stop_layer == i + 1:
-                return h
-
-        h = F.dropout(F.relu(self.fc6(h)), train=self.train, ratio=0.5)
-        h = F.dropout(F.relu(self.fc7(h)), train=self.train, ratio=0.5)
+        # Fully connected layers
+        h = F.dropout(F.relu(self.fc6(h)), train=train)
+        h = F.dropout(F.relu(self.fc7(h)), train=train)
         h = self.fc8(h)
 
-        if self.train:
-            self.loss = F.softmax_cross_entropy(h, t)
-            self.acc = F.accuracy(h, t)
-            return self.loss
-        else:
-            self.pred = F.softmax(h)
-            return self.pred
+        return F.softmax(h)
+
+    def feature_map_activations(self, x):
+
+        """Forward pass through the convolutional layers of the VGG returning
+        all of its intermediate feature map activations."""
+
+        hs = []
+        pre_pooling_sizes = []
+
+        h = x
+
+        for conv_block, mp in zip(self.conv_blocks, self.mps):
+            for conv in conv_block:
+                h = F.relu(conv(h))
+
+            pre_pooling_sizes.append(h.data.shape[2:])
+            h = mp(h)
+            hs.append(h.data)
+
+        return hs, pre_pooling_sizes
 
     def activations(self, x, layer):
+
+        """Return filter activations projected back to the input space,
+        e.g. RGB images with shape (n_feature_maps, 3, 224, 224).
+        """
+
         if x.data.shape[0] != 1:
             raise TypeError('Visualization is only supported for a single \
                             image at a time')
 
-        self.add_deconv_layers()
+        layer -= 1  # From 1 to 0 based index
 
-        # Forward pass
-        h = self(x, stop_layer=layer)
+        self.check_add_deconv_layers()
+        hs, unpooling_sizes = self.feature_map_activations(x)
 
-        # Compute the activations for each feature map
-        h_data = h.data.copy()
-        xp = chainer.cuda.get_array_module(h.data)
-        zeros = xp.zeros_like(h.data)
-        convs = self.convs[:layer]
-        deconvs = [['de{}'.format(c) for c in conv] for conv in convs]
+        xp = self.xp
+        n_feature_maps = hs[layer].shape[1]
+        feature_maps = []
 
-        feat_maps = []
+        for i in range(n_feature_maps):  # For each channel
+            h = hs[layer].copy()
 
-        for fm in range(h.data.shape[1]):  # For each feature map
+            condition = xp.zeros_like(h)
+            condition[0][i] = 1  # Keep one feature map and zero all other
 
-            print('Feature map {}'.format(fm))
+            h = Variable(xp.where(condition, h, xp.zeros_like(h)))
 
-            condition = zeros.copy()
-            condition[0][fm] = 1  # Keep one feature map and zero all other
-            h = Variable(xp.where(condition, h_data, zeros))
+            for i in reversed(range(layer+1)):
+                p = self.mps[i]
+                unpooling_size = unpooling_sizes[i]
+                h = F.upsampling_2d(h, p.indexes, p.kh, p.sy, p.ph, unpooling_size)
+                for deconv in reversed(self.deconv_blocks[i]):
+                    h = deconv(F.relu(h))
 
-            for i, deconv in enumerate(reversed(deconvs)):
-                h = F.unpooling_2d(h, self.switches[layer-i-1], 2, stride=2,
-                                   outsize=self.unpooling_outsizes[layer-i-1])
-                for d in reversed(deconv):
-                    h = getattr(self, d)(F.relu(h))
+            feature_maps.append(h.data)
 
-            feat_maps.append(h.data)
+        return xp.concatenate(feature_maps)
 
-        feat_maps = xp.array(feat_maps)
-        feat_maps = xp.rollaxis(feat_maps, 0, 2)  # Batch to first axis
+    def check_add_deconv_layers(self, nobias=True):
 
-        return Variable(feat_maps)
-
-    def add_deconv_layers(self, nobias=True):
         """Add a deconvolutional layer for each convolutional layer already
         defined in the network."""
-        if self.added_deconv:
+
+        if len(self.deconv_blocks) == len(self.conv_blocks):
             return
 
-        for layer in self.children():
-            if isinstance(layer, F.Convolution2D):
-                out_channels, in_channels, kh, kw = layer.W.data.shape
-                deconv = L.Deconvolution2D(out_channels, in_channels,
-                                           (kh, kw), stride=layer.stride,
-                                           pad=layer.pad,
-                                           initialW=layer.W.data,
-                                           nobias=nobias)
-                self.add_link('de{}'.format(layer.name), deconv)
+        for conv_block in self.conv_blocks:
+            deconv_block = []
+            for conv in conv_block:
+                out_channels, in_channels, kh, kw = conv.W.data.shape
 
-        self.added_deconv = True
+                if isinstance(conv.W.data, cupy.ndarray):
+                    initialW = cupy.asnumpy(conv.W.data)
+                else:
+                    initialW = conv.W.data
+
+                deconv = L.Deconvolution2D(out_channels, in_channels,
+                                           (kh, kw), stride=conv.stride,
+                                           pad=conv.pad,
+                                           initialW=initialW,
+                                           nobias=nobias)
+
+                if isinstance(conv.W.data, cupy.ndarray):
+                    deconv.to_gpu()
+
+                self.add_link('de{}'.format(conv.name), deconv)
+                deconv_block.append(deconv)
+
+            self.deconv_blocks.append(deconv_block)

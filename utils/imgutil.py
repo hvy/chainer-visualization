@@ -1,11 +1,12 @@
 import os
 import math
 import numpy as np
-import cv2 as cv
+# import cv2 as cv
 import matplotlib
 matplotlib.use('Agg')  # Workaround to save images when running over ssh sessions
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from PIL import Image
 
 
 def tile_ims(filename, directory):
@@ -17,7 +18,9 @@ def tile_ims(filename, directory):
 
 def save_im(filename, im):
     # h, w, c = im.shape
-    cv.imwrite(filename, im)
+    # cv.imwrite(filename, im)
+    im = Image.fromarray(im)
+    im.save(filename)
 
 
 def save_ims(filename, ims):
