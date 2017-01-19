@@ -39,9 +39,3 @@ Simply run the `visualize.py` script. The VGG model will be feeded with one of t
 ### Fifth layer of convolutions
 
 ![](samples/cat/conv5.jpg)
-
-## TODO
-
-- [ ] Speed up indexed unpooling
-- [ ] Support GPU
-- [ ] Support Python 3.5
