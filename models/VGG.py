@@ -76,43 +76,43 @@ class VGG(chainer.Chain):
 
         return hs, pre_pooling_sizes
 
-    def activations(self, x, layer):
+    def activations(self, x, layer_idx):
 
         """Return filter activations projected back to the input space,
-        e.g. RGB images with shape (n_feature_maps, 3, 224, 224).
+        e.g. RGB images with shape (n_layers, n_feature_maps, 3, 224, 224)
+        for a particula layer. The given layer index is expected to be
+        1-based.
         """
 
         if x.data.shape[0] != 1:
             raise TypeError('Visualization is only supported for a single \
                             image at a time')
 
-        layer -= 1  # From 1 to 0 based index
-
         self.check_add_deconv_layers()
         hs, unpooling_sizes = self.feature_map_activations(x)
 
-        xp = self.xp
-        n_feature_maps = hs[layer].shape[1]
-        feature_maps = []
+        activation_maps = []
+        n_activation_maps = hs[layer_idx].shape[1]
 
-        for i in range(n_feature_maps):  # For each channel
-            h = hs[layer].copy()
+        xp = self.xp
+
+        for i in range(n_activation_maps):  # For each channel
+            h = hs[layer_idx].copy()
 
             condition = xp.zeros_like(h)
             condition[0][i] = 1  # Keep one feature map and zero all other
 
             h = Variable(xp.where(condition, h, xp.zeros_like(h)))
 
-            for i in reversed(range(layer+1)):
+            for i in reversed(range(layer_idx+1)):
                 p = self.mps[i]
-                unpooling_size = unpooling_sizes[i]
-                h = F.upsampling_2d(h, p.indexes, p.kh, p.sy, p.ph, unpooling_size)
+                h = F.upsampling_2d(h, p.indexes, p.kh, p.sy, p.ph, unpooling_sizes[i])
                 for deconv in reversed(self.deconv_blocks[i]):
                     h = deconv(F.relu(h))
 
-            feature_maps.append(h.data)
+            activation_maps.append(h.data)
 
-        return xp.concatenate(feature_maps)
+        return xp.concatenate(activation_maps)
 
     def check_add_deconv_layers(self, nobias=True):
 
