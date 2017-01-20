@@ -72,7 +72,7 @@ class VGG(chainer.Chain):
 
             pre_pooling_sizes.append(h.data.shape[2:])
             h = mp(h)
-            hs.append(h.data)
+            hs.append(h)
 
         return hs, pre_pooling_sizes
 
@@ -89,6 +89,7 @@ class VGG(chainer.Chain):
 
         self.check_add_deconv_layers()
         hs, unpooling_sizes = self.feature_map_activations(x)
+        hs = [h.data for h in hs]
 
         activation_maps = []
         n_activation_maps = hs[layer_idx].shape[1]
