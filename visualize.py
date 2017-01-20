@@ -12,7 +12,7 @@ from lib.models import VGG
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=int, default=1)
+    parser.add_argument('--gpu', type=int, default=-1)
     parser.add_argument('--out-dirname', type=str, default='results')
     parser.add_argument('--image-filename', type=str, default='images/cat.jpg')
     parser.add_argument('--model-filename', type=str, default='VGG.model')
@@ -71,27 +71,27 @@ def read_im(filename):
     return im
 
 
-def visualize_layer_activations(model, x, layer_idx):
+def visualize_layer_activations(model, im, layer_idx):
 
     """Compute the activations for each feature map for the given layer for
     this particular image. Note that the input x should be a mini-batch
     of size one, i.e. a single image.
     """
 
-    if model._device_id and model._device_id >= 0:  # Using GPU
-        x = cupy.array(x)
+    if hasattr(model, '_device_id') and model._device_id >= 0:  # Using GPU
+        im = cupy.array(im)
 
-    a = model.activations(Variable(x), layer_idx)
+    activations = model.activations(Variable(im), layer_idx)
 
-    if model._device_id and model._device_id >= 0:
-        a = cupy.asnumpy(a)
+    if hasattr(model, '_device_id') and model._device_id >= 0:
+        activations = cupy.asnumpy(activations)
 
     # Rescale to [0, 255]
-    a -= a.min()
-    a /= a.max()
-    a *= 255
+    activations -= activations.min()
+    activations /= activations.max()
+    activations *= 255
 
-    return a.astype(np.uint8)
+    return activations.astype(np.uint8)
 
 
 def visualize(out_dirname, im, model):
