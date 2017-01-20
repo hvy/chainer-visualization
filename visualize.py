@@ -86,10 +86,7 @@ def visualize_layer_activations(model, x, layer_idx):
     if model._device_id and model._device_id >= 0:
         a = cupy.asnumpy(a)
 
-    # Normalize and rescale to [0, 255]
-    a -= a.mean()
-    a /= (a.std() + 1e-5)
-    a *= 0.1
+    # Rescale to [0, 255]
     a -= a.min()
     a /= a.max()
     a *= 255
