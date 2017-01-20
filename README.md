@@ -9,27 +9,29 @@ Download the pretrained VGG Chainer model following the README in [this](https:/
 Then, run the `visualize.py` script as follows. The VGG model will be feeded with an image and the activations in each of the five convolutional layer will be projected back to the input space, i.e. the space of the original image of size (3, 224, 224). The projections will be stored in the specified output directory.
 
 ```bash
-python visualize.py --image-filename images/cat.jpg --model-filename VGG.model --out-dirname results --gpu 0 
+python visualize.py --image-filename images/cat.jpg --model-filename VGG.model --out-dirname results --gpu 0
 ```
 
-## Sample Outputs
+## Visualized Activations
 
-### First layer of convolutions
+Activation from the convolutional layers of VGG using an image of a cat. Higher resolution images are found in the `samples` directory.
+
+### 1st Layer of Convolutions
 
 ![](samples/cat/conv1.jpg)
 
-### Second layer of convolutions
+### 2nd Layer of Convolutions
 
 ![](samples/cat/conv2.jpg)
 
-### Third layer of convolutions
+### 3rd Layer of Convolutions
 
 ![](samples/cat/conv3.jpg)
 
-### Forth layer of convolutions
+### 4th Layer of Convolutions
 
 ![](samples/cat/conv4.jpg)
 
-### Fifth layer of convolutions
+### 5th Layer of Convolutions
 
 ![](samples/cat/conv5.jpg)
