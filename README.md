@@ -12,26 +12,28 @@ Then, run the `visualize.py` script as follows. The VGG model will be feeded wit
 python visualize.py --image-filename images/cat.jpg --model-filename VGG.model --out-dirname results --gpu 0
 ```
 
-## Visualized Activations
+You can visualize the activations for an image of arbitrary size since the image will be scaled to the size expected by the classifier.
 
-Activation from the convolutional layers of VGG using an image of a cat. Higher resolution images are found in the `samples` directory.
+## Samples
+
+Activations visualized from the convolutional layers of VGG using an image of a cat. Higher resolution images are found in the `samples` directory.
 
 ### 1st Layer of Convolutions
 
-![](samples/cat/conv1.jpg)
+![](samples/conv1.png)
 
 ### 2nd Layer of Convolutions
 
-![](samples/cat/conv2.jpg)
+![](samples/conv2.png)
 
 ### 3rd Layer of Convolutions
 
-![](samples/cat/conv3.jpg)
+![](samples/conv3.png)
 
 ### 4th Layer of Convolutions
 
-![](samples/cat/conv4.jpg)
+![](samples/conv4.png)
 
 ### 5th Layer of Convolutions
 
-![](samples/cat/conv5.jpg)
+![](samples/conv5.png)
