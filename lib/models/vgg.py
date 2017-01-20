@@ -78,9 +78,8 @@ class VGG(chainer.Chain):
 
     def activations(self, x, layer_idx):
 
-        """Return filter activations projected back to the input space,
-        i.e. images with shape (n_feature_maps, 3, 224, 224)
-        for a particula layer.
+        """Return filter activations projected back to the input space, i.e.
+        images with shape (n_feature_maps, 3, 224, 224) for a particula layer.
 
         The layer index is expected to be 0-based.
         """
