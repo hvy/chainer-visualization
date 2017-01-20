@@ -78,12 +78,12 @@ def visualize_layer_activations(model, im, layer_idx):
     of size one, i.e. a single image.
     """
 
-    if hasattr(model, '_device_id') and model._device_id >= 0:  # Using GPU
+    if model._device_id is not None and model._device_id >= 0:  # Using GPU
         im = cupy.array(im)
 
     activations = model.activations(Variable(im), layer_idx)
 
-    if hasattr(model, '_device_id') and model._device_id >= 0:
+    if isinstance(activations, cupy.ndarray):
         activations = cupy.asnumpy(activations)
 
     # Rescale to [0, 255]
