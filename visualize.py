@@ -1,12 +1,15 @@
 import argparse
-import os
 import math
-import cupy
+import os
+
+from chainer import cuda
+from chainer import serializers
+from chainer import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from PIL import Image
-from chainer import Variable, serializers, cuda
+
 from lib.models import VGG
 
 
@@ -79,12 +82,12 @@ def visualize_layer_activations(model, im, layer_idx):
     """
 
     if model._device_id is not None and model._device_id >= 0:  # Using GPU
-        im = cupy.array(im)
+        im = cuda.cupy.array(im)
 
     activations = model.activations(Variable(im), layer_idx)
 
-    if isinstance(activations, cupy.ndarray):
-        activations = cupy.asnumpy(activations)
+    if isinstance(activations, cuda.ndarray):
+        activations = cuda.cupy.asnumpy(activations)
 
     # Rescale to [0, 255]
     activations -= activations.min()
@@ -125,21 +128,16 @@ def visualize(out_dirname, im, model):
 
 
 def main(args):
-    gpu = args.gpu
-    out_dirname = args.out_dirname
-    model_filename = args.model_filename
-    image_filename = args.image_filename
-
     model = VGG()
-    serializers.load_hdf5(model_filename, model)
+    serializers.load_hdf5(args.model_filename, model)
 
-    if gpu >= 0:
-        cuda.get_device(gpu).use()
+    if args.gpu >= 0:
+        cuda.get_device(args.gpu).use()
         model.to_gpu()
 
-    im = read_im(image_filename)
+    im = read_im(args.image_filename)
 
-    visualize(out_dirname, im, model)
+    visualize(args.out_dirname, im, model)
 
 
 if __name__ == '__main__':
