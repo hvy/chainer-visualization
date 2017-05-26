@@ -1,8 +1,8 @@
-import cupy
 import chainer
+from chainer import cuda
+from chainer import Variable
 import chainer.links as L
 import chainer.functions as F
-from chainer import Variable
 
 
 class VGG(chainer.Chain):
@@ -127,8 +127,8 @@ class VGG(chainer.Chain):
             for conv in conv_block:
                 out_channels, in_channels, kh, kw = conv.W.data.shape
 
-                if isinstance(conv.W.data, cupy.ndarray):
-                    initialW = cupy.asnumpy(conv.W.data)
+                if isinstance(conv.W.data, cuda.ndarray):
+                    initialW = cuda.cupy.asnumpy(conv.W.data)
                 else:
                     initialW = conv.W.data
 
@@ -138,7 +138,7 @@ class VGG(chainer.Chain):
                                            initialW=initialW,
                                            nobias=nobias)
 
-                if isinstance(conv.W.data, cupy.ndarray):
+                if isinstance(conv.W.data, cuda.ndarray):
                     deconv.to_gpu()
 
                 self.add_link('de{}'.format(conv.name), deconv)
