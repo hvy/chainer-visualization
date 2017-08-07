@@ -1,10 +1,15 @@
+import matplotlib  # NOQA
+matplotlib.use('Agg')  # NOQA
+
 import argparse
 import math
 import os
 
+import chainer
 from chainer import cuda
 from chainer import serializers
 from chainer import Variable
+from chainer import links as L
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -127,19 +132,23 @@ def visualize(out_dirname, im, model):
         save_to_ims(activations, dirname)
 
 
-def main(args):
+if __name__ == '__main__':
+    args = parse_args()
     model = VGG()
     serializers.load_hdf5(args.model_filename, model)
+
+    im = read_im(args.image_filename)
 
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()
         model.to_gpu()
+        im = cuda.to_gpu(im)
 
-    im = read_im(args.image_filename)
+    with chainer.using_config('train', False):
+        pred = model(im)
+
+    pred = pred.data
+    if cuda.get_array_module(pred) != np:
+        pred = cuda.to_cpu(pred)
 
     visualize(args.out_dirname, im, model)
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    main(args)

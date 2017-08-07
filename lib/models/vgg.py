@@ -7,28 +7,29 @@ import chainer.functions as F
 
 class VGG(chainer.Chain):
 
-    """Input dimensions are (224, 224)."""
+    """Input dimensions are (n, 3, 224, 224)."""
 
     def __init__(self):
-        super().__init__(
-            conv1_1=L.Convolution2D(3, 64, 3, stride=1, pad=1),
-            conv1_2=L.Convolution2D(64, 64, 3, stride=1, pad=1),
-            conv2_1=L.Convolution2D(64, 128, 3, stride=1, pad=1),
-            conv2_2=L.Convolution2D(128, 128, 3, stride=1, pad=1),
-            conv3_1=L.Convolution2D(128, 256, 3, stride=1, pad=1),
-            conv3_2=L.Convolution2D(256, 256, 3, stride=1, pad=1),
-            conv3_3=L.Convolution2D(256, 256, 3, stride=1, pad=1),
-            conv4_1=L.Convolution2D(256, 512, 3, stride=1, pad=1),
-            conv4_2=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-            conv4_3=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-            conv5_1=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-            conv5_2=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-            conv5_3=L.Convolution2D(512, 512, 3, stride=1, pad=1),
-            fc6=L.Linear(25088, 4096),
-            fc7=L.Linear(4096, 4096),
-            fc8=L.Linear(4096, 1000)
-        )
+        super(VGG, self).__init__()
+        with self.init_scope():
+            self.conv1_1 = L.Convolution2D(3, 64, 3, stride=1, pad=1)
+            self.conv1_2 = L.Convolution2D(64, 64, 3, stride=1, pad=1)
+            self.conv2_1 = L.Convolution2D(64, 128, 3, stride=1, pad=1)
+            self.conv2_2 = L.Convolution2D(128, 128, 3, stride=1, pad=1)
+            self.conv3_1 = L.Convolution2D(128, 256, 3, stride=1, pad=1)
+            self.conv3_2 = L.Convolution2D(256, 256, 3, stride=1, pad=1)
+            self.conv3_3 = L.Convolution2D(256, 256, 3, stride=1, pad=1)
+            self.conv4_1 = L.Convolution2D(256, 512, 3, stride=1, pad=1)
+            self.conv4_2 = L.Convolution2D(512, 512, 3, stride=1, pad=1)
+            self.conv4_3 = L.Convolution2D(512, 512, 3, stride=1, pad=1)
+            self.conv5_1 = L.Convolution2D(512, 512, 3, stride=1, pad=1)
+            self.conv5_2 = L.Convolution2D(512, 512, 3, stride=1, pad=1)
+            self.conv5_3 = L.Convolution2D(512, 512, 3, stride=1, pad=1)
+            self.fc6 = L.Linear(25088, 4096)
+            self.fc7 = L.Linear(4096, 4096)
+            self.fc8 = L.Linear(4096, 1000)
 
+        # Keep track of the pooling indices inside each function instance
         self.conv_blocks = [
             [self.conv1_1, self.conv1_2],
             [self.conv2_1, self.conv2_2],
@@ -36,12 +37,10 @@ class VGG(chainer.Chain):
             [self.conv4_1, self.conv4_2, self.conv4_3],
             [self.conv5_1, self.conv5_2, self.conv5_3]
         ]
-        self.deconv_blocks= []
+        self.deconv_blocks = []
+        self.mps = [F.MaxPooling2D(2, 2) for _ in self.conv_blocks]
 
-        # Keep track of the pooling indices inside each function instance
-        self.mps = [F.MaxPooling2D(2, 2, use_cudnn=False) for _ in self.conv_blocks]
-
-    def __call__(self, x, train=False):
+    def __call__(self, x):
 
         """Return a softmax probability distribution over predicted classes."""
 
@@ -50,8 +49,8 @@ class VGG(chainer.Chain):
         h = hs[-1]
 
         # Fully connected layers
-        h = F.dropout(F.relu(self.fc6(h)), train=train)
-        h = F.dropout(F.relu(self.fc7(h)), train=train)
+        h = F.dropout(F.relu(self.fc6(h)))
+        h = F.dropout(F.relu(self.fc7(h)))
         h = self.fc8(h)
 
         return F.softmax(h)
@@ -65,13 +64,15 @@ class VGG(chainer.Chain):
         pre_pooling_sizes = []
 
         h = x
-
         for conv_block, mp in zip(self.conv_blocks, self.mps):
             for conv in conv_block:
                 h = F.relu(conv(h))
 
             pre_pooling_sizes.append(h.data.shape[2:])
-            h = mp(h)
+
+            # Disable cuDNN, else pooling indices will not be stored
+            with chainer.using_config('use_cudnn', 'never'):
+                h = mp(h)
             hs.append(h)
 
         return hs, pre_pooling_sizes
