@@ -72,7 +72,7 @@ class VGG(chainer.Chain):
 
             # Disable cuDNN, else pooling indices will not be stored
             with chainer.using_config('use_cudnn', 'never'):
-                h = mp(h)
+                h = mp.apply((h,))[0]
             hs.append(h)
 
         return hs, pre_pooling_sizes
